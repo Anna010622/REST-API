@@ -1,6 +1,6 @@
 import Joi from 'joi';
 
-const contactSchema = Joi.object({
+export const contactSchema = Joi.object({
 	name: Joi.string()
 		.required()
 		.min(3)
@@ -16,9 +16,21 @@ const contactSchema = Joi.object({
 	email: Joi.string().email().required().messages({
 		'any.required': `missing required email field`,
 	}),
-	phone: Joi.string().required().replace(/\D+/g, '').min(7).max(12).messages({
-		'any.required': `missing required phone field`,
-	}),
+	phone: Joi.string()
+		.required()
+		.pattern(/^\+?3?8?(0\d{9})$/, { name: 'Phone' })
+		.min(7)
+		.max(12)
+		.messages({
+			'any.required': `missing required phone field`,
+			'string.pattern.name':
+				'The phone number must be in a valid format: +380 ## ### #### or 0## ### ####',
+		}),
+	favorite: Joi.boolean(),
 });
 
-export default contactSchema;
+export const contactUpdateFavoriteSchema = Joi.object({
+	favorite: Joi.boolean().required().messages({
+		'any.required': `missing field favorite`,
+	}),
+});
