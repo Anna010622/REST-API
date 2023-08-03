@@ -35,7 +35,6 @@ contactsRouter.put(
 contactsRouter.patch(
 	'/:contactId/favorite',
 	isValidId,
-	isEmptyBody,
 	validateBody(contactUpdateFavoriteSchema),
 	ctrlWrapper(updateStatusContact)
 );
