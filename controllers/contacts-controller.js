@@ -1,9 +1,21 @@
 import { HttpError } from '../helpers/index.js';
 import Contact from '../models/contact.js';
 
-export const getAll = async (_, res) => {
-	const contacts = await Contact.find();
-	res.json(contacts);
+export const getAll = async (req, res) => {
+	const { _id: owner } = req.user;
+	const { page = 1, limit = 20, ...query } = req.query;
+	const skip = (page - 1) * limit;
+	const total = await Contact.find({ owner, ...query });
+	const contacts = await Contact.find({ owner, ...query }, '', {
+		skip,
+		limit,
+	});
+	res.json({
+		page,
+		result: contacts,
+		total: total.length,
+		total_pages: Math.ceil(total.length / limit),
+	});
 };
 
 export const getById = async (req, res) => {
@@ -16,7 +28,8 @@ export const getById = async (req, res) => {
 };
 
 export const add = async (req, res) => {
-	const newContact = await Contact.create(req.body);
+	const { _id: owner } = req.user;
+	const newContact = await Contact.create({ ...req.body, owner });
 	res.status(201).json(newContact);
 };
 

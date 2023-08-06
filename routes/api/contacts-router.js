@@ -12,9 +12,15 @@ import {
 	contactSchema,
 	contactUpdateFavoriteSchema,
 } from '../../schemas/contact-schema.js';
-import { isEmptyBody, isValidId } from '../../middlewares/index.js';
+import {
+	isEmptyBody,
+	isValidId,
+	authenticate,
+} from '../../middlewares/index.js';
 
 const contactsRouter = express.Router();
+
+contactsRouter.use(authenticate);
 
 contactsRouter.get('/', ctrlWrapper(getAll));
 contactsRouter.get('/:contactId', isValidId, ctrlWrapper(getById));
