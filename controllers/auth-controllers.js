@@ -4,12 +4,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { nanoid } from 'nanoid';
 import 'dotenv/config';
 import { unlink } from 'node:fs';
-import { HttpError } from '../helpers/index.js';
+import { HttpError, sendEmail } from '../helpers/index.js';
 import User from '../models/user.js';
 
-const { JWT_SECRET } = process.env;
+const { JWT_SECRET, BASE_URL } = process.env;
 
 export const signUp = async (req, res) => {
 	const { email, password } = req.body;
@@ -26,11 +27,20 @@ export const signUp = async (req, res) => {
 	});
 
 	const hashedPassword = await bcrypt.hash(password, 10);
+	const verificationToken = nanoid();
 	const newUser = await User.create({
 		email,
 		password: hashedPassword,
 		avatarURL,
+		verificationToken,
 	});
+
+	const verifyEmail = {
+		to: email,
+		subject: 'Verify email',
+		html: `<a href="${BASE_URL}/users/verify/${verificationToken}" target="_blank">Click verify email</a>`,
+	};
+	await sendEmail(verifyEmail);
 
 	res.status(201).json({
 		user: {
@@ -41,12 +51,61 @@ export const signUp = async (req, res) => {
 	});
 };
 
+export const verify = async (req, res) => {
+	const { verificationToken } = req.params;
+	console.log(verificationToken);
+	const user = await User.findOne({ verificationToken });
+	console.log(user);
+	if (!user) {
+		throw HttpError(404, 'User not found');
+	}
+
+	await User.findByIdAndUpdate(user._id, {
+		verificationToken: null,
+		verify: true,
+	});
+
+	res.json({
+		message: 'Verification successful',
+	});
+};
+
+export const resendVerifyEmail = async (req, res) => {
+	const { email } = req.body;
+
+	const user = await User.findOne({ email });
+
+	if (!user) {
+		throw HttpError(404, 'User not found');
+	}
+
+	if (user.verify) {
+		throw HttpError(400, 'Verification has already been passed');
+	}
+
+	const verifyEmail = {
+		to: email,
+		subject: 'Verify email',
+		html: `<a href="${BASE_URL}/users/verify/${user.verificationToken}" target="_blank">Click verify email</a>`,
+	};
+
+	await sendEmail(verifyEmail);
+
+	res.json({
+		message: 'Verification email sent',
+	});
+};
+
 export const signIn = async (req, res) => {
 	const { email, password } = req.body;
 
 	const user = await User.findOne({ email });
 	if (!user) {
 		throw HttpError(401, 'Email or password is wrong');
+	}
+
+	if (!user.verify) {
+		throw HttpError(401, 'Email needs verification');
 	}
 
 	const isCorrectPassword = await bcrypt.compare(password, user.password);

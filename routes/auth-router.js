@@ -2,11 +2,14 @@ import express from 'express';
 import {
 	userSchema,
 	userUpdateSubscriptionSchema,
+	userEmailSchema,
 } from '../schemas/user-schema.js';
 import { ctrlWrapper, validateBody } from '../decorators/index.js';
 import { isEmptyBody, authenticate, upload } from '../middlewares/index.js';
 import {
 	signUp,
+	verify,
+	resendVerifyEmail,
 	signIn,
 	getCurrent,
 	signOut,
@@ -21,6 +24,14 @@ authRouter.post(
 	isEmptyBody,
 	validateBody(userSchema),
 	ctrlWrapper(signUp)
+);
+
+authRouter.get('/verify/:verificationToken', ctrlWrapper(verify));
+
+authRouter.post(
+	'/verify',
+	validateBody(userEmailSchema),
+	ctrlWrapper(resendVerifyEmail)
 );
 
 authRouter.post(
